@@ -50,9 +50,11 @@ h1 {
 
 /* perspective が、部屋の回転に奥行きを与えます */
 .stage {
+  --cube-size: min(82vw, 620px);
   display: grid;
   place-items: center;
   min-height: 0;
+  overflow: hidden;
   perspective: 1000px;
   cursor: grab;
   touch-action: pan-y;
@@ -70,14 +72,16 @@ h1 {
   border-radius: 8px;
 }
 
-.carousel {
+.room-cube {
   position: relative;
-  width: min(76vw, 620px);
+  width: var(--cube-size);
   height: min(54vh, 460px);
   transform-style: preserve-3d;
+  /* 視点を立方体の外側へ戻し、正面の面を画面に合わせます */
+  transform: translateZ(calc(var(--cube-size) * -0.5));
 }
 
-/* 各部屋を同じ場所に重ね、JavaScriptで位置と角度を変えます */
+/* 各部屋は、立方体の面として90度ずつ異なる向きに固定します */
 .room {
   position: absolute;
   inset: 0;
@@ -92,7 +96,18 @@ h1 {
     0 28px 60px rgb(0 0 0 / 35%),
     inset 0 0 80px rgb(0 0 0 / 18%);
   backface-visibility: hidden;
-  transition: opacity 360ms ease;
+}
+
+.room--front {
+  transform: rotateY(0deg) translateZ(calc(var(--cube-size) * 0.5));
+}
+
+.room--right {
+  transform: rotateY(90deg) translateZ(calc(var(--cube-size) * 0.5));
+}
+
+.room--back {
+  transform: rotateY(180deg) translateZ(calc(var(--cube-size) * 0.5));
 }
 
 .room::before {
@@ -172,7 +187,7 @@ h1 {
 
 /* 動きを減らす設定を使う人には、切り替え時間を短くします */
 @media (prefers-reduced-motion: reduce) {
-  .room,
+  .room-cube,
   .dot {
     transition-duration: 1ms;
   }
@@ -183,8 +198,7 @@ h1 {
     padding: 24px 20px 28px;
   }
 
-  .carousel {
-    width: 82vw;
+  .room-cube {
     height: 55vh;
   }
 }
