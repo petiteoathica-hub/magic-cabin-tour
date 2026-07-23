@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>魔法の小屋探訪001</title>
+  <title>魔法の小屋探訪</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -23,34 +23,32 @@
       tabindex="0"
       aria-label="部屋の切り替え。左右にスワイプ、ドラッグ、または矢印キーで操作できます。"
     >
-      <!-- 3つの部屋は、立方体の異なる面として固定されています -->
+      <!--
+        正面と上下左右の5面だけを用意します。
+        中身は、正面が切り替わるたびにJavaScriptで再抽選されます。
+      -->
       <div id="room-cube" class="room-cube">
-        <article class="room room--guest room--front" aria-label="客間">
+        <article class="room room--front" data-face="front" aria-label="客間">
           <span class="room__number">01</span>
           <h2>客間</h2>
           <p>旅人を迎える、灯りのやわらかな部屋</p>
         </article>
 
-        <article class="room room--study room--right" aria-label="書斎">
-          <span class="room__number">02</span>
-          <h2>書斎</h2>
-          <p>古い魔導書が静かに眠る部屋</p>
-        </article>
-
-        <article class="room room--workshop room--back" aria-label="工房">
-          <span class="room__number">03</span>
-          <h2>工房</h2>
-          <p>不思議な道具が作られる部屋</p>
-        </article>
+        <article class="room room--right" data-face="right"></article>
+        <article class="room room--left" data-face="left"></article>
+        <article class="room room--top" data-face="top"></article>
+        <article class="room room--bottom" data-face="bottom"></article>
       </div>
     </section>
 
     <footer class="cottage__footer">
-      <p>左右にスワイプ / ドラッグ</p>
-      <div class="dots" aria-hidden="true">
-        <span class="dot is-active"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
+      <p>上下左右にスワイプ / ドラッグ</p>
+      <div class="direction-mark" aria-hidden="true">
+        <span class="direction-mark__dot direction-mark__dot--top"></span>
+        <span class="direction-mark__dot direction-mark__dot--left"></span>
+        <span class="direction-mark__dot direction-mark__dot--center"></span>
+        <span class="direction-mark__dot direction-mark__dot--right"></span>
+        <span class="direction-mark__dot direction-mark__dot--bottom"></span>
       </div>
     </footer>
   </main>
