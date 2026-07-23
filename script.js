@@ -1,7 +1,7 @@
 // 部屋の名前と、画面上の要素をまとめて取得します
 const roomNames = ["客間", "書斎", "工房"];
 const stage = document.querySelector("#room-stage");
-const carousel = document.querySelector("#room-carousel");
+const roomCube = document.querySelector("#room-cube");
 const rooms = [...document.querySelectorAll(".room")];
 const roomName = document.querySelector("#room-name");
 const dots = [...document.querySelectorAll(".dot")];
@@ -15,26 +15,19 @@ let isDragging = false;
 const changeThreshold = 55;
 
 /**
- * 各部屋の位置と角度を更新します。
- * dragX がある間は、指やマウスの移動量に合わせて途中の角度も表示します。
+ * キューブ全体の向きを更新します。
+ * 各部屋は立方体の面に固定され、ここでは視点の角度だけを変えます。
  */
-function renderRooms(animate = true) {
-  const dragProgress = dragX / Math.max(stage.clientWidth, 1);
+function renderCube(animate = true) {
+  // ステージ幅の半分をドラッグすると、およそ90度回転します
+  const dragAngle = (dragX / Math.max(stage.clientWidth * 0.5, 1)) * 90;
+  const angle = currentIndex * -90 + dragAngle;
 
-  rooms.forEach((room, index) => {
-    const position = index - currentIndex + dragProgress;
-    const x = position * 78;
-    const angle = position * -62;
-    const depth = Math.abs(position) * -170;
-
-    room.style.transition = animate
-      ? "transform 520ms cubic-bezier(.2,.75,.2,1), opacity 360ms ease"
-      : "none";
-    room.style.transform =
-      `translateX(${x}%) translateZ(${depth}px) rotateY(${angle}deg)`;
-    room.style.opacity = Math.abs(position) > 1.25 ? "0" : "1";
-    room.style.zIndex = String(10 - Math.round(Math.abs(position)));
-  });
+  roomCube.style.transition = animate
+    ? "transform 560ms cubic-bezier(.2,.75,.2,1)"
+    : "none";
+  roomCube.style.transform =
+    `translateZ(calc(var(--cube-size) * -0.5)) rotateY(${angle}deg)`;
 }
 
 // 部屋名と下部の目印を、現在の部屋に合わせます
@@ -59,7 +52,7 @@ function moveDrag(event) {
   if (!isDragging) return;
 
   dragX = event.clientX - startX;
-  renderRooms(false);
+  renderCube(false);
 }
 
 // 指またはマウスを離したとき、移動量に応じて部屋を決めます
@@ -76,7 +69,7 @@ function endDrag(event) {
 
   dragX = 0;
   updateRoomInformation();
-  renderRooms(true);
+  renderCube(true);
 
   if (stage.hasPointerCapture(event.pointerId)) {
     stage.releasePointerCapture(event.pointerId);
@@ -101,12 +94,12 @@ stage.addEventListener("keydown", (event) => {
 
   event.preventDefault();
   updateRoomInformation();
-  renderRooms(true);
+  renderCube(true);
 });
 
 // 画面サイズが変わった場合も、正しい位置に描き直します
-window.addEventListener("resize", () => renderRooms(false));
+window.addEventListener("resize", () => renderCube(false));
 
 // 最初の部屋を表示します
 updateRoomInformation();
-renderRooms(false);
+renderCube(false);
