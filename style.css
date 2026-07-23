@@ -1,0 +1,190 @@
+/* すべての要素で余白を計算しやすくします */
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  background: #120f19;
+  color: #fff8df;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100svh;
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 30%, #3b2f4a 0%, transparent 42%),
+    #120f19;
+}
+
+.cottage {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  width: 100%;
+  min-height: 100svh;
+  padding: clamp(24px, 5vw, 56px);
+}
+
+.cottage__header {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.cottage__eyebrow {
+  margin: 0 0 8px;
+  color: #d8bd83;
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 6vw, 3.4rem);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+/* perspective が、部屋の回転に奥行きを与えます */
+.stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  perspective: 1000px;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  outline: none;
+}
+
+.stage:active {
+  cursor: grabbing;
+}
+
+.stage:focus-visible {
+  outline: 2px solid #f4d997;
+  outline-offset: 8px;
+  border-radius: 8px;
+}
+
+.carousel {
+  position: relative;
+  width: min(76vw, 620px);
+  height: min(54vh, 460px);
+  transform-style: preserve-3d;
+}
+
+/* 各部屋を同じ場所に重ね、JavaScriptで位置と角度を変えます */
+.room {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: clamp(24px, 5vw, 48px);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 6px;
+  box-shadow:
+    0 28px 60px rgb(0 0 0 / 35%),
+    inset 0 0 80px rgb(0 0 0 / 18%);
+  backface-visibility: hidden;
+  transition: opacity 360ms ease;
+}
+
+.room::before {
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgb(255 248 223 / 20%);
+  content: "";
+  pointer-events: none;
+}
+
+.room--guest {
+  background: linear-gradient(145deg, #a56c4b, #5d3444);
+}
+
+.room--study {
+  background: linear-gradient(145deg, #45635d, #203b49);
+}
+
+.room--workshop {
+  background: linear-gradient(145deg, #8b7441, #4b3b68);
+}
+
+.room__number {
+  position: absolute;
+  top: 30px;
+  right: 34px;
+  color: rgb(255 248 223 / 55%);
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+}
+
+.room h2 {
+  margin: 0 0 10px;
+  font-size: clamp(2.2rem, 8vw, 5rem);
+  font-weight: 500;
+}
+
+.room p {
+  margin: 0;
+  color: rgb(255 248 223 / 75%);
+  font-size: clamp(0.82rem, 2vw, 1rem);
+  letter-spacing: 0.05em;
+}
+
+.cottage__footer {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  color: rgb(255 248 223 / 58%);
+  font-family: sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+
+.cottage__footer p {
+  margin: 0;
+}
+
+.dots {
+  display: flex;
+  gap: 9px;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(255 248 223 / 25%);
+  transition: width 240ms ease, background 240ms ease;
+}
+
+.dot.is-active {
+  width: 18px;
+  border-radius: 99px;
+  background: #f4d997;
+}
+
+/* 動きを減らす設定を使う人には、切り替え時間を短くします */
+@media (prefers-reduced-motion: reduce) {
+  .room,
+  .dot {
+    transition-duration: 1ms;
+  }
+}
+
+@media (max-width: 600px) {
+  .cottage {
+    padding: 24px 20px 28px;
+  }
+
+  .carousel {
+    width: 82vw;
+    height: 55vh;
+  }
+}
