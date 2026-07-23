@@ -1,105 +1,283 @@
-// 部屋の名前と、画面上の要素をまとめて取得します
-const roomNames = ["客間", "書斎", "工房"];
+// 表示候補となる仮の部屋です。
+// 正面と上下左右で重複しないよう、5種類より多く用意しています。
+const roomCatalog = [
+  {
+    id: "guest",
+    name: "客間",
+    description: "旅人を迎える、灯りのやわらかな部屋",
+  },
+  {
+    id: "study",
+    name: "書斎",
+    description: "古い魔導書が静かに眠る部屋",
+  },
+  {
+    id: "workshop",
+    name: "工房",
+    description: "不思議な道具が作られる部屋",
+  },
+  {
+    id: "greenhouse",
+    name: "温室",
+    description: "月明かりを浴びた植物が育つ部屋",
+  },
+  {
+    id: "observatory",
+    name: "星見の間",
+    description: "遠い星の声に耳を澄ませる部屋",
+  },
+  {
+    id: "pantry",
+    name: "魔法の食料庫",
+    description: "季節外れの香りが瓶に詰まった部屋",
+  },
+  {
+    id: "attic",
+    name: "屋根裏",
+    description: "忘れられた旅支度が積まれた部屋",
+  },
+  {
+    id: "herbarium",
+    name: "薬草室",
+    description: "乾いた葉と古い処方箋が並ぶ部屋",
+  },
+];
+
 const stage = document.querySelector("#room-stage");
 const roomCube = document.querySelector("#room-cube");
-const rooms = [...document.querySelectorAll(".room")];
 const roomName = document.querySelector("#room-name");
-const dots = [...document.querySelectorAll(".dot")];
+const faces = Object.fromEntries(
+  [...document.querySelectorAll(".room")].map((face) => [face.dataset.face, face]),
+);
 
-let currentIndex = 0;
-let startX = 0;
-let dragX = 0;
+let currentRoom = roomCatalog[0];
+let previousRoomId = null;
+let faceRooms = {};
+
 let isDragging = false;
+let dragAxis = null;
+let startX = 0;
+let startY = 0;
+let dragX = 0;
+let dragY = 0;
+let movementSamples = [];
+let isSettling = false;
 
-// 1回の操作で部屋を切り替えるために必要な移動距離です
-const changeThreshold = 55;
+const distanceThreshold = 55;
+const velocityThreshold = 0.45; // 1ミリ秒あたりの移動ピクセル数
+const axisLockThreshold = 8;
+
+// 配列をランダムな順番に並べ替えます
+function shuffle(items) {
+  const result = [...items];
+
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  }
+
+  return result;
+}
+
+// 部屋の情報を1枚の面へ描画します
+function fillFace(face, room) {
+  const roomNumber = String(roomCatalog.indexOf(room) + 1).padStart(2, "0");
+
+  face.dataset.room = room.id;
+  face.setAttribute("aria-label", room.name);
+  face.innerHTML = `
+    <span class="room__number">${roomNumber}</span>
+    <h2>${room.name}</h2>
+    <p>${room.description}</p>
+  `;
+}
 
 /**
- * キューブ全体の向きを更新します。
- * 各部屋は立方体の面に固定され、ここでは視点の角度だけを変えます。
+ * 現在の正面を除外して、上下左右の4部屋を再抽選します。
+ * 直前の正面も除外するため、すぐ戻っても同じ部屋にはなりません。
  */
-function renderCube(animate = true) {
-  // ステージ幅の半分をドラッグすると、およそ90度回転します
-  const dragAngle = (dragX / Math.max(stage.clientWidth * 0.5, 1)) * 90;
-  const angle = currentIndex * -90 + dragAngle;
+function generateSurroundingRooms() {
+  const candidates = roomCatalog.filter(
+    (room) => room.id !== currentRoom.id && room.id !== previousRoomId,
+  );
+  const selectedRooms = shuffle(candidates).slice(0, 4);
+  const directions = ["top", "bottom", "left", "right"];
+
+  faceRooms = { front: currentRoom };
+  directions.forEach((direction, index) => {
+    faceRooms[direction] = selectedRooms[index];
+  });
+
+  Object.entries(faceRooms).forEach(([direction, room]) => {
+    fillFace(faces[direction], room);
+  });
+
+  roomName.textContent = currentRoom.name;
+}
+
+// ドラッグ量を立方体の回転角度へ変換します
+function renderCube(animate = false, targetX = null, targetY = null) {
+  let angleX = 0;
+  let angleY = 0;
+
+  if (targetX !== null || targetY !== null) {
+    angleX = targetX ?? 0;
+    angleY = targetY ?? 0;
+  } else if (dragAxis === "horizontal") {
+    angleY = (dragX / Math.max(stage.clientWidth * 0.5, 1)) * 90;
+  } else if (dragAxis === "vertical") {
+    angleX = (dragY / Math.max(stage.clientHeight * 0.5, 1)) * -90;
+  }
+
+  // 1回のドラッグで90度を超えて回らないようにします
+  angleX = Math.max(-90, Math.min(90, angleX));
+  angleY = Math.max(-90, Math.min(90, angleY));
 
   roomCube.style.transition = animate
     ? "transform 560ms cubic-bezier(.2,.75,.2,1)"
     : "none";
   roomCube.style.transform =
-    `translateZ(calc(var(--cube-size) * -0.5)) rotateY(${angle}deg)`;
+    `translateZ(calc(var(--cube-size) * -0.5)) rotateX(${angleX}deg) rotateY(${angleY}deg)`;
 }
 
-// 部屋名と下部の目印を、現在の部屋に合わせます
-function updateRoomInformation() {
-  roomName.textContent = roomNames[currentIndex];
-
-  dots.forEach((dot, index) => {
-    dot.classList.toggle("is-active", index === currentIndex);
-  });
-}
-
-// 指またはマウスが押された位置を記録します
 function startDrag(event) {
+  if (isSettling) return;
+
   isDragging = true;
+  dragAxis = null;
   startX = event.clientX;
+  startY = event.clientY;
   dragX = 0;
+  dragY = 0;
+  movementSamples = [{ x: startX, y: startY, time: performance.now() }];
   stage.setPointerCapture(event.pointerId);
 }
 
-// 移動中は、指やマウスに部屋が追従するようにします
 function moveDrag(event) {
   if (!isDragging) return;
 
   dragX = event.clientX - startX;
+  dragY = event.clientY - startY;
+
+  // 少し動かしてから、移動量の大きい軸へ操作方向を固定します
+  if (!dragAxis && Math.max(Math.abs(dragX), Math.abs(dragY)) >= axisLockThreshold) {
+    dragAxis = Math.abs(dragX) >= Math.abs(dragY) ? "horizontal" : "vertical";
+  }
+
+  const now = performance.now();
+  movementSamples.push({ x: event.clientX, y: event.clientY, time: now });
+  movementSamples = movementSamples.filter((sample) => now - sample.time <= 100);
+
   renderCube(false);
 }
 
-// 指またはマウスを離したとき、移動量に応じて部屋を決めます
+// 直近100ミリ秒の動きから、選ばれた軸の速度を求めます
+function getReleaseVelocity() {
+  if (movementSamples.length < 2 || !dragAxis) return 0;
+
+  const first = movementSamples[0];
+  const last = movementSamples[movementSamples.length - 1];
+  const elapsed = Math.max(last.time - first.time, 1);
+  const distance =
+    dragAxis === "horizontal" ? last.x - first.x : last.y - first.y;
+
+  return distance / elapsed;
+}
+
+function settleToDirection(direction) {
+  const targetAngles = {
+    right: [0, -90],
+    left: [0, 90],
+    top: [-90, 0],
+    bottom: [90, 0],
+  };
+  const [targetX, targetY] = targetAngles[direction];
+
+  isSettling = true;
+  renderCube(true, targetX, targetY);
+
+  // 吸着アニメーション完了後、選ばれた面を新しい正面にします
+  let hasFinished = false;
+  let fallbackTimer;
+  const finishSettling = () => {
+    if (hasFinished) return;
+    hasFinished = true;
+    window.clearTimeout(fallbackTimer);
+    roomCube.removeEventListener("transitionend", finishSettling);
+
+    const oldRoomId = currentRoom.id;
+    currentRoom = faceRooms[direction];
+    previousRoomId = oldRoomId;
+
+    // 回転値を0へ正規化してから、周囲4面を魔法のように組み替えます
+    renderCube(false, 0, 0);
+    generateSurroundingRooms();
+    isSettling = false;
+  };
+
+  roomCube.addEventListener("transitionend", finishSettling, { once: true });
+  // すでに90度までドラッグ済みでも、確実に次の正面へ更新します
+  fallbackTimer = window.setTimeout(finishSettling, 650);
+}
+
 function endDrag(event) {
   if (!isDragging) return;
 
   isDragging = false;
+  const velocity = getReleaseVelocity();
+  const distance = dragAxis === "horizontal" ? dragX : dragY;
+  const shouldMove =
+    dragAxis &&
+    (Math.abs(distance) >= distanceThreshold ||
+      (Math.abs(distance) >= axisLockThreshold &&
+        Math.abs(velocity) >= velocityThreshold));
 
-  if (dragX < -changeThreshold && currentIndex < rooms.length - 1) {
-    currentIndex += 1;
-  } else if (dragX > changeThreshold && currentIndex > 0) {
-    currentIndex -= 1;
+  if (shouldMove) {
+    let direction;
+
+    if (dragAxis === "horizontal") {
+      direction = distance < 0 ? "right" : "left";
+    } else {
+      direction = distance < 0 ? "bottom" : "top";
+    }
+
+    settleToDirection(direction);
+  } else {
+    // 条件に届かなければ、元の正面へ滑らかに戻します
+    renderCube(true, 0, 0);
   }
 
   dragX = 0;
-  updateRoomInformation();
-  renderCube(true);
+  dragY = 0;
+  dragAxis = null;
 
   if (stage.hasPointerCapture(event.pointerId)) {
     stage.releasePointerCapture(event.pointerId);
   }
 }
 
-// Pointer Events はタッチ操作とマウス操作の両方を扱えます
 stage.addEventListener("pointerdown", startDrag);
 stage.addEventListener("pointermove", moveDrag);
 stage.addEventListener("pointerup", endDrag);
 stage.addEventListener("pointercancel", endDrag);
 
-// PCで確認しやすいよう、左右の矢印キーにも対応します
+// PCでは上下左右の矢印キーでも90度回転できます
 stage.addEventListener("keydown", (event) => {
-  if (event.key === "ArrowRight" && currentIndex < rooms.length - 1) {
-    currentIndex += 1;
-  } else if (event.key === "ArrowLeft" && currentIndex > 0) {
-    currentIndex -= 1;
-  } else {
-    return;
-  }
+  const directions = {
+    ArrowRight: "right",
+    ArrowLeft: "left",
+    ArrowUp: "top",
+    ArrowDown: "bottom",
+  };
+  const direction = directions[event.key];
+
+  if (!direction || isSettling) return;
 
   event.preventDefault();
-  updateRoomInformation();
-  renderCube(true);
+  settleToDirection(direction);
 });
 
-// 画面サイズが変わった場合も、正しい位置に描き直します
-window.addEventListener("resize", () => renderCube(false));
+window.addEventListener("resize", () => renderCube(false, 0, 0));
 
-// 最初の部屋を表示します
-updateRoomInformation();
-renderCube(false);
+generateSurroundingRooms();
+renderCube(false, 0, 0);
