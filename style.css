@@ -57,7 +57,8 @@ h1 {
   overflow: hidden;
   perspective: 1000px;
   cursor: grab;
-  touch-action: pan-y;
+  /* ブラウザ標準のスクロールより、4方向のドラッグ操作を優先します */
+  touch-action: none;
   user-select: none;
   outline: none;
 }
@@ -106,8 +107,16 @@ h1 {
   transform: rotateY(90deg) translateZ(calc(var(--cube-size) * 0.5));
 }
 
-.room--back {
-  transform: rotateY(180deg) translateZ(calc(var(--cube-size) * 0.5));
+.room--left {
+  transform: rotateY(-90deg) translateZ(calc(var(--cube-size) * 0.5));
+}
+
+.room--top {
+  transform: rotateX(90deg) translateZ(calc(var(--cube-size) * 0.5));
+}
+
+.room--bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--cube-size) * 0.5));
 }
 
 .room::before {
@@ -118,16 +127,36 @@ h1 {
   pointer-events: none;
 }
 
-.room--guest {
+.room[data-room="guest"] {
   background: linear-gradient(145deg, #a56c4b, #5d3444);
 }
 
-.room--study {
+.room[data-room="study"] {
   background: linear-gradient(145deg, #45635d, #203b49);
 }
 
-.room--workshop {
+.room[data-room="workshop"] {
   background: linear-gradient(145deg, #8b7441, #4b3b68);
+}
+
+.room[data-room="greenhouse"] {
+  background: linear-gradient(145deg, #537052, #273f44);
+}
+
+.room[data-room="observatory"] {
+  background: linear-gradient(145deg, #4d527e, #292943);
+}
+
+.room[data-room="pantry"] {
+  background: linear-gradient(145deg, #a06b55, #5a4031);
+}
+
+.room[data-room="attic"] {
+  background: linear-gradient(145deg, #75634f, #3d3540);
+}
+
+.room[data-room="herbarium"] {
+  background: linear-gradient(145deg, #697443, #38453d);
 }
 
 .room__number {
@@ -166,29 +195,43 @@ h1 {
   margin: 0;
 }
 
-.dots {
-  display: flex;
-  gap: 9px;
+.direction-mark {
+  display: grid;
+  grid-template: repeat(3, 5px) / repeat(3, 5px);
+  gap: 5px;
 }
 
-.dot {
+.direction-mark__dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: rgb(255 248 223 / 25%);
-  transition: width 240ms ease, background 240ms ease;
 }
 
-.dot.is-active {
-  width: 18px;
-  border-radius: 99px;
+.direction-mark__dot--top {
+  grid-area: 1 / 2;
+}
+
+.direction-mark__dot--left {
+  grid-area: 2 / 1;
+}
+
+.direction-mark__dot--center {
+  grid-area: 2 / 2;
   background: #f4d997;
+}
+
+.direction-mark__dot--right {
+  grid-area: 2 / 3;
+}
+
+.direction-mark__dot--bottom {
+  grid-area: 3 / 2;
 }
 
 /* 動きを減らす設定を使う人には、切り替え時間を短くします */
 @media (prefers-reduced-motion: reduce) {
-  .room-cube,
-  .dot {
+  .room-cube {
     transition-duration: 1ms;
   }
 }
